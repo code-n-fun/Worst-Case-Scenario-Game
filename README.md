@@ -168,3 +168,18 @@ src/app/modern.css and the home page. No external image or font download is
 required. src/components/direct-thread.tsx and message-tools.tsx contain the
 social UI. SQL privacy, reply boundaries, reactions, unread counts, and Peek
 purchase protection are covered by tests/social.test.ts.
+
+## Daily check-in gifts
+
+Run `supabase/community/30_daily_reward_status.sql`, then `31_claim_daily_reward.sql`.
+The header's **Daily gift** button opens the coin shop with a claim card. A player's
+first claim awards 6 coins; later UTC days offer 2 coins. The welcome gift replaces
+the daily gift on that first day. Missing days never accumulate. Existing players
+can also claim a welcome gift without resetting their wallet.
+
+Claims use a per-identity row lock, a unique identity/day receipt, and the existing
+transactional ledger. Browser time cannot determine eligibility. Reading status
+never issues coins. Duplicate claims return zero and the current balance.
+Guest identities can be recreated, so these checks prevent repeat claims for the
+same identity, not abuse across new identities. All rewards remain virtual.
+This update does not enable credit staking or change existing match rewards.

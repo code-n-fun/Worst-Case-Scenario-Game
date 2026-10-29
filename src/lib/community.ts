@@ -2,7 +2,7 @@ import {getClient,act} from './client';
 import {useGame} from './store';
 import {nextReadCursor,unreadMessages} from './notification-rules';
 import {demoWallet,demoBuy,demoSettings} from './demo';
-import type {Wallet,PublicRoom,ChatMessage,Person,Conversation} from './types';
+import type {Wallet,PublicRoom,ChatMessage,Person,Conversation,DailyReward} from './types';
 export async function rpc<T>(name:string,args:Record<string,unknown>={}):Promise<T>{
  const db=await getClient();const {data,error}=await db.rpc(name,args);
  if(error)throw new Error(error.message);if(data?.error)throw new Error(data.error);return data as T;
@@ -17,6 +17,8 @@ export async function sendChat(body:string,room:string|null,invite:string|null,r
 export const blockUser=(id:string,block=true)=>rpc('chat_block',{p_user:id,p_block:block});
 export const reportMessage=(id:number,reason:string)=>rpc('chat_report',{p_message:id,p_reason:reason});
 export const wallet=()=>useGame.getState().connection==='demo'?Promise.resolve(demoWallet()):rpc<Wallet>('wallet_read');
+export const dailyReward=()=>rpc<DailyReward>('daily_reward_status');
+export const claimDailyReward=()=>rpc<{awarded:number;balance:number;reward:DailyReward}>('claim_daily_reward');
 export async function buy(sku:string,code?:string,item?:number){
  if(useGame.getState().connection==='demo'){const result=demoBuy(sku,item);useGame.getState().setRoom(result.room);return result.effect;}
  const result=await rpc<Record<string,unknown>>('shop_buy',{p_sku:sku,p_room_code:code||null,p_item:item??null});

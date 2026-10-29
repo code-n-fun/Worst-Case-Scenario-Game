@@ -109,3 +109,13 @@ limits alone cannot stop determined abuse.
 A guest wallet belongs to its Supabase user ID, not to the nickname. Clearing
 browser storage loses access unless the identity was linked to a recoverable
 account. Cross-device wallet recovery/account-linking UI is not implemented.
+
+DAILY GIFTS UPDATE — run 30 then 31 after the earlier migrations.
+30_daily_reward_status.sql creates protected reward records and a read-only status RPC.
+31_claim_daily_reward.sql adds the transactional claim RPC.
+The first claim awards 6 welcome coins, replacing that day's 2-coin daily gift.
+Following UTC days offer 2 coins, once per authenticated identity per day.
+Rewards must be claimed; missed days do not accumulate and there is no streak.
+Existing players can claim the one-time welcome gift too. No balances are reset.
+Guest identities remain supported; this does not prevent new-identity farming.
+Credit entry fees, currency exchange, and ranked pool settlement are not activated.

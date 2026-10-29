@@ -6,3 +6,12 @@ body{background:radial-gradient(ellipse at 18% 5%,#1b243c70,transparent 45%),rad
 @media(max-width:380px){.hero h1{font-size:64px}.hero h1 span{letter-spacing:-4px}.play-area{padding:20px 14px}.nav-right{gap:9px}}
 .message-extra-actions .emoji-options{position:relative;left:5px;bottom:auto;grid-template-columns:repeat(4,27px);padding:4px;box-shadow:none}.message-extra-actions .emoji-options button{font-size:16px;padding:4px}
 @media(max-width:760px){.hero h1{font-size:clamp(56px,17vw,74px)}}
+
+/* Daily gifts use the same server wallet as the shop. */
+.daily-gift-button{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:8px 12px;border:1px solid #c9f36a44;border-radius:12px;background:#c9f36a0c;color:#d8f99b;font-size:13px;font-weight:650;cursor:pointer}
+.daily-gift-button:hover{background:#c9f36a20}
+.daily-reward{display:flex;align-items:center;gap:14px;margin:18px 0;padding:20px;border:1px solid #b7a1ff55;border-radius:18px;background:linear-gradient(120deg,#b7a1ff18,#c9f36a0b)}
+.daily-reward-icon{flex-shrink:0;color:#c9f36a;align-self:flex-start;padding-top:3px}
+.daily-reward-copy{flex:1;min-width:0}.daily-reward h3{font-size:17px;line-height:1.35;margin:0 0 7px;color:#f2f3ed}.daily-reward p{font-size:13px;line-height:1.6;margin:0;color:#bfc0c9}.daily-reward .success-note{color:#d8f99b;margin-top:8px}.daily-reward .community-error{color:#ffb7b7;margin-top:8px}
+.daily-countdown{display:block;font-size:12px;color:#c9b7ff;margin-top:9px;font-variant-numeric:tabular-nums}
+@media(max-width:640px){.daily-reward{flex-wrap:wrap;padding:16px;gap:12px}.daily-reward-copy{flex-basis:calc(100% - 48px)}.daily-reward>button{width:100%}.daily-gift-button{padding:8px}.daily-gift-button span{display:none}}

@@ -12,6 +12,7 @@ export type PublicRoom = {code:string; title:string; phase:Phase; players:number
 export type ChatMessage = {id:number; sender_id:string; nickname:string; body:string; created_at:string; invite_code:string|null;reply?:{id:number;body:string}|null;reactions?:Reaction[]};
 export type ShopItem = {sku:string; name:string; price:number; kind:'hint'|'reroll'|'cosmetic'|'pack'; enabled:boolean};
 export type Wallet = {balance:number; catalog:ShopItem[]; unlocks:string[]; history:{amount:number;reason:string;created_at:string}[]};
+export type DailyReward={canClaim:boolean;claimedToday:boolean;welcomeAvailable:boolean;amount:number;nextClaimAt:string;serverTime:string};
 
 export type Reaction={emoji:string;count:number;mine:boolean};
 export type Person={id:string;nickname:string;online?:boolean;room_code?:string|null;room_title?:string|null};
