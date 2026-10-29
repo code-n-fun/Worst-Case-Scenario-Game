@@ -119,3 +119,10 @@ Rewards must be claimed; missed days do not accumulate and there is no streak.
 Existing players can claim the one-time welcome gift too. No balances are reset.
 Guest identities remain supported; this does not prevent new-identity farming.
 Credit entry fees, currency exchange, and ranked pool settlement are not activated.
+
+EARLY DEPARTURE UPDATE — run 32 then 33 after the earlier migrations.
+32_departure_fees.sql: protected platform receipts and transactional transfer.
+33_match_leave_penalty.sql: integrates fees with voluntary match departure.
+Up to 3 available coins are transferred, once per user/match. No debt is created.
+No charge for lobby, completed match, spectators, demo, or connection timeout.
+Other players pay nothing when the host closes the room.

@@ -183,3 +183,16 @@ never issues coins. Duplicate claims return zero and the current balance.
 Guest identities can be recreated, so these checks prevent repeat claims for the
 same identity, not abuse across new identities. All rewards remain virtual.
 This update does not enable credit staking or change existing match rewards.
+
+## Leaving during a match
+
+Apply `32_departure_fees.sql` then `33_match_leave_penalty.sql` after the earlier
+community updates. An explicit Leave during an unfinished match transfers up to
+3 coins from the active round participant to the protected platform coin ledger.
+The confirmation explains the fee and the insufficient-balance rule. There is
+no negative balance, and a zero balance produces a zero-value receipt. A unique
+user/match receipt prevents a second charge after rejoining the same match.
+Lobbies, completed matches, waiting spectators, offline demos, and automatic
+connection timeouts have no fee. The host pays only their own fee when leaving;
+other players are not charged when that closes the room.
+This is a virtual-coin transfer, not cash revenue.
