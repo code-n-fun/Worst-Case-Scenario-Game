@@ -18,3 +18,8 @@ body{background:radial-gradient(ellipse at 18% 5%,#1b243c70,transparent 45%),rad
 
 .leave-banner>div{flex:1;min-width:0}.leave-banner strong{font-size:14px}.leave-banner p{margin:6px 0 0;font-size:12px;line-height:1.6;color:var(--muted)}
 @media(max-width:640px){.leave-banner{flex-wrap:wrap}.leave-banner>div{flex-basis:100%}}
+
+/* Launch polish: readable touch inputs, keyboard focus, and reduced motion. */
+@media(max-width:640px){input,textarea,select{font-size:16px}.nav-right{gap:9px}.brand-light{display:none}.nav{gap:8px}.site{padding-left:18px;padding-right:18px}}
+button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #c9f36a;outline-offset:4px}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}

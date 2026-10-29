@@ -196,3 +196,22 @@ Lobbies, completed matches, waiting spectators, offline demos, and automatic
 connection timeouts have no fee. The host pays only their own fee when leaving;
 other players are not charged when that closes the room.
 This is a virtual-coin transfer, not cash revenue.
+
+## Launch cleanup
+
+As the project owner, run `supabase/maintenance/launch_cleanup.sql` once in the
+Supabase SQL Editor after community scripts 02–33. It is deliberately outside
+the migrations folder and is never executed by the browser or normal deployment.
+It archives social records in the owner-only `launch_backup` schema, clears
+messages and presence up to the fixed cutoff 2026-10-29 20:33:53 UTC, and expires
+rooms created before that cutoff. Reports associated with removed messages
+cascade; their archive is retained. ID sequences and read cursors are preserved.
+Wallets, purchases, reward eligibility, platform receipts, guest identities,
+nicknames, authored scenarios, and items are preserved. No balances are reset.
+A completion marker prevents repeated cleanup. Newer messages and rooms survive.
+This script requires owner SQL access; a public publishable key cannot run it.
+
+The solo demo remains opt-in and explicitly marked as offline with bots.
+All public rooms and conversations use actual database records, without seeded
+players or fake activity. Publishing source does not run SQL migrations.
+The proposed credit exchange and ranked entry pools are not enabled.

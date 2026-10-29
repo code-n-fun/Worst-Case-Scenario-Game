@@ -1,0 +1,28 @@
+import {beforeAll,afterAll,it,expect} from 'vitest';
+import {PGlite} from '@electric-sql/pglite';
+import {readFileSync,readdirSync} from 'node:fs';
+let db:PGlite;
+const uid='66666666-0000-4000-8000-000000000001';
+const cleanup=()=>db.exec(readFileSync('supabase/maintenance/launch_cleanup.sql','utf8'));
+beforeAll(async()=>{db=new PGlite();await db.exec(`create role anon;create role authenticated;create schema auth;create function auth.uid() returns uuid language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;create schema realtime;create table realtime.messages(id int);alter table realtime.messages enable row level security;create function realtime.topic() returns text language sql as $$select ''::text$$;create function realtime.send(jsonb,text,text,boolean) returns void language sql as $$select$$;`);await db.exec(readFileSync('supabase/migrations/001_party.sql','utf8'));for(const f of readdirSync('supabase/community').filter(f=>f.endsWith('.sql')).sort())await db.exec(readFileSync('supabase/community/'+f,'utf8'));},30000);
+afterAll(async()=>db.close());
+it('archives pre-launch social data, preserves newer activity and wallets, and runs only once',async()=>{
+ await db.query("select wallet_change($1,6,'fixture-welcome','Welcome gift')",[uid]);
+ await db.query("insert into rooms(code,host,created_at,is_public) values('OLDX',$1,'2026-10-28',true),('NEWX',$1,'2099-01-01',true)",[uid]);
+ const old=(await db.query<{id:number}>("insert into chat_messages(user_id,nickname,body,created_at) values($1,'Tester','Old test message','2026-10-28') returning id",[uid])).rows[0].id;
+ const fresh=(await db.query<{id:number}>("insert into chat_messages(user_id,nickname,body,created_at,reply_to) values($1,'Player','New live message','2099-01-01',$2) returning id",[uid,old])).rows[0].id;
+ await db.query("insert into message_reactions values('public',$1,$2,'👍'),('public',$3,$2,'❤️')",[old,uid,fresh]);
+ await db.query("insert into direct_messages(sender_id,recipient_id,body,created_at) values($1,'66666666-0000-4000-8000-000000000002','Old DM','2026-10-28')",[uid]);
+ await cleanup();
+ expect((await db.query<{body:string;reply_to:number|null}>('select body,reply_to from chat_messages')).rows).toEqual([{body:'New live message',reply_to:null}]);
+ expect((await db.query('select * from direct_messages')).rows).toHaveLength(0);
+ expect((await db.query('select * from launch_backup.chat_messages')).rows).toHaveLength(2);
+ expect((await db.query<{emoji:string}>('select emoji from message_reactions')).rows).toEqual([{emoji:'❤️'}]);
+ expect((await db.query<{is_public:boolean}>('select is_public from rooms order by code')).rows).toEqual([{is_public:true},{is_public:false}]);
+ expect((await db.query<{balance:number}>('select balance from coin_wallets where user_id=$1',[uid])).rows[0].balance).toBe(6);
+ expect((await db.query('select * from coin_ledger')).rows).toHaveLength(1);
+ await db.query("insert into chat_messages(user_id,nickname,body,created_at) values($1,'Tester','Inserted after cleanup','2026-10-28')",[uid]);
+ await cleanup();expect((await db.query('select * from chat_messages')).rows).toHaveLength(2);
+ const newer=(await db.query<{id:number}>("insert into chat_messages(user_id,nickname,body) values($1,'Tester','IDs keep increasing') returning id",[uid])).rows[0].id;expect(newer).toBeGreaterThan(fresh);
+ await db.exec('set role authenticated');await expect(db.query('select * from launch_backup.chat_messages')).rejects.toThrow(/permission denied/);await db.exec('reset role');
+});
