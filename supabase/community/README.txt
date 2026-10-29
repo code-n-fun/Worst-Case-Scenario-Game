@@ -130,3 +130,7 @@ Other players pay nothing when the host closes the room.
 VERIFIED LEAVE FIX — run 34_verified_leave.sql after 32 and 33.
 Returns actual debit and balance, verifies platform settlement, and supports retries.
 The updated browser requires this RPC for online departures.
+
+DEPARTURE REPAIR — run 32, 35, 36. If 32–34 already ran, only 35 and 36 are needed.
+Solo players and completed matches, including final results, pay no fee.
+An overdue final round resolving during departure is also exempt.

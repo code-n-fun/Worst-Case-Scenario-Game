@@ -230,3 +230,11 @@ responses, and reloads when entering or leaving the offline demo. A creator's
 room-closure broadcast cannot discard their own confirmed fee receipt.
 The public frontend cannot install SQL; missing RPCs are reported instead of
 pretending that a charged exit succeeded.
+
+## Departure fee exemptions
+
+For this repair, run 32, then 35, then 36. If 32–34 already ran, run only 35 and 36. There is no departure fee when there
+are no other active players with a heartbeat in the last 45 seconds, during
+the lobby, or once the match is finished (including final results). Resolving
+an overdue final round while leaving also qualifies as a completed match.
+The fee eligibility check and verified receipt follow identical rules.

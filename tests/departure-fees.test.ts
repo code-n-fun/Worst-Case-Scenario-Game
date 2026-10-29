@@ -6,7 +6,7 @@ async function call(i:number,name:string,args:unknown[]=[]):Promise<any>{await d
 async function action(i:number,a:string,p={}){return call(i,'party_action',[a,code||null,JSON.stringify(p)]);}
 async function fixture(start=true,balance=10){serial++;ids=[0,1,2,3].map(n=>`88888888-0000-4000-8000-${String(serial*10+n).padStart(12,'0')}`);code='';code=(await action(0,'create',{nickname:'Host'})).code;for(let i=1;i<3;i++)await action(i,'join',{nickname:`Guest ${i}`});for(const id of ids)await db.query("select wallet_change($1,$2,$3,'Test funding')",[id,balance,'fund:'+id]);if(start)await action(0,'start');}
 async function receipt(){return (await db.query<{amount:number}>('select amount from platform_coin_ledger where user_id=any($1::uuid[])',[ids])).rows;}
-beforeAll(async()=>{db=new PGlite();await db.exec(`create role anon;create role authenticated;create schema auth;create function auth.uid() returns uuid language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;create schema realtime;create table realtime.messages(id int);alter table realtime.messages enable row level security;create function realtime.topic() returns text language sql as $$select ''::text$$;create function realtime.send(jsonb,text,text,boolean) returns void language sql as $$select$$;`);await db.exec(readFileSync('supabase/migrations/001_party.sql','utf8'));for(const f of readdirSync('supabase/community').filter(f=>f.endsWith('.sql')).sort())await db.exec(readFileSync('supabase/community/'+f,'utf8'));},30000);
+beforeAll(async()=>{db=new PGlite();await db.exec(`create role anon;create role authenticated;create schema auth;create function auth.uid() returns uuid language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;create schema realtime;create table realtime.messages(id int);alter table realtime.messages enable row level security;create function realtime.topic() returns text language sql as $$select ''::text$$;create function realtime.send(jsonb,text,text,boolean) returns void language sql as $$select$$;`);await db.exec(readFileSync('supabase/migrations/001_party.sql','utf8'));for(const f of readdirSync('supabase/community').filter(f=>f.endsWith('.sql')&&!f.startsWith('33_')&&!f.startsWith('34_')).sort())await db.exec(readFileSync('supabase/community/'+f,'utf8'));},30000);
 afterAll(async()=>db.close());
 describe.sequential('early match departure transfers',()=>{
  it('does not charge for leaving a lobby',async()=>{await fixture(false);await action(1,'leave');expect((await call(1,'wallet_read')).balance).toBe(10);expect(await receipt()).toEqual([]);});
@@ -42,7 +42,22 @@ describe.sequential('early match departure transfers',()=>{
  it('rejects and rolls back an unverified exit if the fee hook is missing',async()=>{
   await fixture();await db.exec("create or replace function public.room_lifecycle(p_action text,p_code text,p_payload jsonb) returns jsonb language sql security definer set search_path=public as $$select room_lifecycle_base(p_action,p_code,p_payload)$$");
   await expect(call(1,'leave_room',[code])).rejects.toThrow(/could not be verified/);expect((await call(1,'wallet_read')).balance).toBe(10);expect((await action(1,'snapshot')).items).toHaveLength(3);
-  await db.exec(readFileSync('supabase/community/33_match_leave_penalty.sql','utf8'));
+  await db.exec(readFileSync('supabase/community/35_departure_exemptions.sql','utf8'));
+ });
+ it('lets the last active player leave without losing coins',async()=>{
+  await fixture();await db.query('update players set active=false where room_id=(select id from rooms where code=$1) and user_id<>$2',[code,ids[0]]);
+  expect(await call(0,'leave_room',[code])).toEqual({left:true,charged:0,balance:10});expect(await receipt()).toEqual([]);
+ });
+ it('does not charge when every other participant has timed out',async()=>{
+  await fixture();await db.query("update players set last_seen=now()-interval '46 seconds' where room_id=(select id from rooms where code=$1) and user_id<>$2",[code,ids[0]]);
+  expect(await call(0,'leave_room',[code])).toEqual({left:true,charged:0,balance:10});expect(await receipt()).toEqual([]);
+ });
+ it('returns a zero-fee receipt for final results and the finished screen',async()=>{
+  for(const phase of ['results','finished']){await fixture();await db.query('update rooms set round=total_rounds,phase=$2 where code=$1',[code,phase]);expect(await call(1,'leave_room',[code])).toEqual({left:true,charged:0,balance:10});expect(await receipt()).toEqual([]);}
+ });
+ it('does not charge when leaving resolves an overdue final round',async()=>{
+  await fixture();await db.query('update rounds set number=5 where room_id=(select id from rooms where code=$1)',[code]);await db.query("update rooms set round=5,phase='voting',deadline=now()-interval '1 second' where code=$1",[code]);
+  expect(await call(1,'leave_room',[code])).toEqual({left:true,charged:0,balance:10});expect(await receipt()).toEqual([]);
  });
  it('protects platform receipts and transfer helpers from browser clients',async()=>{
   await db.exec('set role authenticated');await expect(db.query('select * from platform_coin_ledger')).rejects.toThrow(/permission denied/);await expect(db.query('select charge_departure_fee($1,gen_random_uuid())',[ids[0]])).rejects.toThrow(/permission denied/);await expect(db.query("select room_lifecycle_base('leave',null,'{}')")).rejects.toThrow(/permission denied/);await db.exec('reset role');
