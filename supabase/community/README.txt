@@ -126,3 +126,7 @@ EARLY DEPARTURE UPDATE — run 32 then 33 after the earlier migrations.
 Up to 3 available coins are transferred, once per user/match. No debt is created.
 No charge for lobby, completed match, spectators, demo, or connection timeout.
 Other players pay nothing when the host closes the room.
+
+VERIFIED LEAVE FIX — run 34_verified_leave.sql after 32 and 33.
+Returns actual debit and balance, verifies platform settlement, and supports retries.
+The updated browser requires this RPC for online departures.

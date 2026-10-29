@@ -3,6 +3,7 @@ import { useGame } from './store';
 import { demoAction } from './demo';
 import {projectConfig} from './project-config';
 import {departureText,newRoomNotices} from './notification-rules';
+import {leaveReceipt} from './wallet-receipt';
 import type { Action, Payload, Room,RoomNotice } from './types';
 let client: SupabaseClient | null = null;
 let channel: RealtimeChannel | null = null;
@@ -25,14 +26,24 @@ export async function act(action:Action,payload:Payload={},code?:string,quiet=fa
  const epoch=roomEpoch;const store=useGame.getState();if(!quiet)store.set({busy:true,error:null});
  try{
   if(demo||store.connection==='demo'){const room=demoAction(action,payload);store.setRoom(room);return room;}
-  const db=await getClient();const requestStart=Date.now();const {data,error}=await db.rpc('party_action',{p_action:action,p_code:code||currentCode,p_payload:payload});if(epoch!==roomEpoch&&action!=='create'&&action!=='join')return null;
+  const db=await getClient();const requestStart=Date.now();const requestedCode=code||currentCode;
+  const {data,error}=action==='leave'?await db.rpc('leave_room',{p_code:requestedCode}):await db.rpc('party_action',{p_action:action,p_code:requestedCode,p_payload:payload});
+  if(action==='leave'){
+   if(error){if(/leave_room|platform_coin_ledger|room_lifecycle|schema cache|PGRST202/.test(error.message))throw new Error('Leaving is temporarily unavailable while the game is being updated. Please try again shortly.');throw new Error(error.message);}
+   if(data?.code==='ROOM_CLOSED'){await closeCurrentRoom(data.error);window.dispatchEvent(new Event('wcs-wallet'));return null;}
+   if(data?.error)throw new Error(data.error);
+   const receipt=leaveReceipt(data);window.dispatchEvent(new CustomEvent('wcs-wallet',{detail:{balance:receipt.balance}}));
+   if(receipt.charged>0)store.notify({id:`fee:${requestedCode}:${requestStart}`,text:`You left the match. ${receipt.charged} coins went to the platform. Your balance is ${receipt.balance} coins.`});
+   if(currentCode&&currentCode!==requestedCode)return null;
+   roomEpoch++;if(store.room)sessionStorage.removeItem(`wcs-room-events:${store.room.code}:${store.room.me}`);sessionStorage.removeItem('party-room');currentCode=null;store.set({room:null,connection:'offline'});await disconnect();window.dispatchEvent(new Event('wcs-rooms'));return null;
+  }
+  if(epoch!==roomEpoch&&action!=='create'&&action!=='join')return null;
   if(data?.code==='ROOM_CLOSED'){await closeCurrentRoom(data.error);return null;}
   if(error)throw new Error(error.message);if(data?.error)throw new Error(data.error);
   const room=data as Room|null;if(room?.serverTime)clockOffset=room.serverTime-(requestStart+Date.now())/2;acceptRoom(room);
   if(room && (action==='create'||action==='join')){roomEpoch++;seenRoomEvents.clear();
       const saved=sessionStorage.getItem(`wcs-room-events:${room.code}:${room.me}`);eventCursor=saved===null?Math.max(0,...(room.roomEvents||[]).map(e=>e.id)):Number(saved)||0;
       ingestEvents(room);currentCode=room.code;sessionStorage.setItem('party-room',room.code);await subscribe(room.code);}
-  if(action==='leave'){roomEpoch++;if(store.room)sessionStorage.removeItem(`wcs-room-events:${store.room.code}:${store.room.me}`);sessionStorage.removeItem('party-room');currentCode=null;await disconnect();store.set({connection:'offline'});}
   return room;
  }catch(e){store.set({error:e instanceof Error?e.message:'Connection failed. Try again.'});if(!quiet)throw e;return null;}
  finally{if(!quiet)store.set({busy:false});}
@@ -65,5 +76,5 @@ async function closeCurrentRoom(reason:string){
  roomEpoch++;currentCode=null;const previous=useGame.getState().room;if(previous)sessionStorage.removeItem(`wcs-room-events:${previous.code}:${previous.me}`);sessionStorage.removeItem('party-room');
  useGame.getState().set({room:null,connection:'offline',error:null});
  useGame.getState().notify({id:`closed:${code}`,text:reason});await disconnect();
- window.dispatchEvent(new Event('wcs-rooms'));
+ window.dispatchEvent(new Event('wcs-rooms'));window.dispatchEvent(new Event('wcs-wallet'));
 }

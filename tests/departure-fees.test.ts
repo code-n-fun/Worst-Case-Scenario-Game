@@ -35,6 +35,15 @@ describe.sequential('early match departure transfers',()=>{
   expect((await action(1,'leave')).error).toMatch(/Platform receipt unavailable/);expect((await call(1,'wallet_read')).balance).toBe(10);expect((await action(1,'snapshot')).items).toHaveLength(3);expect(await receipt()).toEqual([]);
   await db.exec('drop trigger fail_fee_test on platform_coin_ledger;drop function fail_fee_test()');await action(1,'leave');expect((await call(1,'wallet_read')).balance).toBe(7);
  });
+ it('returns a verified debit and remaining balance, including safe retries',async()=>{
+  await fixture();expect(await call(1,'leave_room',[code])).toEqual({left:true,charged:3,balance:7});expect(await call(1,'leave_room',[code])).toEqual({left:true,charged:0,balance:7});
+  expect(await receipt()).toEqual([{amount:3}]);
+ });
+ it('rejects and rolls back an unverified exit if the fee hook is missing',async()=>{
+  await fixture();await db.exec("create or replace function public.room_lifecycle(p_action text,p_code text,p_payload jsonb) returns jsonb language sql security definer set search_path=public as $$select room_lifecycle_base(p_action,p_code,p_payload)$$");
+  await expect(call(1,'leave_room',[code])).rejects.toThrow(/could not be verified/);expect((await call(1,'wallet_read')).balance).toBe(10);expect((await action(1,'snapshot')).items).toHaveLength(3);
+  await db.exec(readFileSync('supabase/community/33_match_leave_penalty.sql','utf8'));
+ });
  it('protects platform receipts and transfer helpers from browser clients',async()=>{
   await db.exec('set role authenticated');await expect(db.query('select * from platform_coin_ledger')).rejects.toThrow(/permission denied/);await expect(db.query('select charge_departure_fee($1,gen_random_uuid())',[ids[0]])).rejects.toThrow(/permission denied/);await expect(db.query("select room_lifecycle_base('leave',null,'{}')")).rejects.toThrow(/permission denied/);await db.exec('reset role');
  });

@@ -215,3 +215,18 @@ The solo demo remains opt-in and explicitly marked as offline with bots.
 All public rooms and conversations use actual database records, without seeded
 players or fake activity. Publishing source does not run SQL migrations.
 The proposed credit exchange and ranked entry pools are not enabled.
+
+## Verified departure and wallet refresh fix
+
+Apply `34_verified_leave.sql` after scripts 32–33. Online departures now use
+`leave_room`, which returns a server-confirmed debit and remaining balance. It
+rolls back an eligible departure if the platform receipt is missing. Old clients
+still use the original leave action; the new client requires the verified RPC.
+Retries do not charge twice. Returning to the same match does not create another
+fee; the confirmation now describes the once-per-match rule.
+
+Wallet refresh listens for settlement and room-closure events, ignores stale
+responses, and reloads when entering or leaving the offline demo. A creator's
+room-closure broadcast cannot discard their own confirmed fee receipt.
+The public frontend cannot install SQL; missing RPCs are reported instead of
+pretending that a charged exit succeeded.
